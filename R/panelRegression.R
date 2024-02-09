@@ -1,22 +1,50 @@
-fileRegressionTable <- function(
+#' @export
+runRegressions <- function(
   dataFilePath,
   outFilePath,
   variableTable,
   regionName,
   timeName,
   timeRange = NULL,
-  regionRegex = NULL
+  regionRegex = NULL,
+  nBatches = 1,
+  batchIndex = 1
 ) {
+
   data <- read_csv(dataFilePath)
-  result <- runRegressionTable(
+
+  batch <- cerUtility::splitAndGetOneBatch(
+    "regressionVariables",
+    seq_len(nrow(variableTable)),
+    nBatches,
+    batchIndex)
+
+  regressionResults <- runRegressionTable(
     data,
-    variableTable,
+    variableTable[batch, ],
     regionName,
     timeName,
     timeRange,
     regionRegex
   )
-  saveRDS(result, file = outFilePath)
+
+  batchOutFilePath <-
+    cerUtility::removeFileNameEnding(outFilePath) |>
+    paste0("_", batchIndex, ".RDS")
+  cerUtility::makeDirsIfNecessary(batchOutFilePath)
+  saveRDS(
+    lst(
+      regressionResults,
+      dataFilePath,
+      outFilePath,
+      variableTable,
+      regionName,
+      timeName,
+      timeRange,
+      regionRegex,
+      nBatches,
+      batchIndex),
+    file = batchOutFilePath)
 }
 
 
