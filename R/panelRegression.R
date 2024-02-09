@@ -1,26 +1,58 @@
-fileRegression <- function(
+fileRegressionTable <- function(
   dataFilePath,
   outFilePath,
-  targetVariable,
-  predictors,
-  fixedEffects,
+  variableTable,
   regionName,
-  timeName
+  timeName,
+  timeRange = NULL,
+  regionRegex = NULL
 ) {
   data <- read_csv(dataFilePath)
-  result <- runRegression(
+  result <- runRegressionTable(
     data,
-    targetVariable,
-    predictors,
-    fixedEffects,
+    variableTable,
     regionName,
-    timeName
+    timeName,
+    timeRange,
+    regionRegex
   )
-  writeRDS(result, file = outFilePath)
+  saveRDS(result, file = outFilePath)
 }
 
 
-runRegression <- function(
+runRegressionTable <- function(
+  data,
+  variableTable,
+  regionName,
+  timeName,
+  timeRange = NULL,
+  regionRegex = NULL
+) {
+
+  if (hasValueString(regionRegex)) {
+    data <- data |> filter(str_detect(!!sym(regionName), regionRegex))
+  }
+  if (length(timeRange) == 2) {
+    data <- data |> filter(!!sym(timeName) >= timeRange[1], !!sym(timeName) <= timeRange[2])
+  }
+
+  resultList <- lapply(seq_len(nrow(variableTable)), \(i) {
+    info <- lapply(variableTable, `[[`, i)
+    result <- runRegressionCore(
+      data,
+      info$targetVariable,
+      info$predictors,
+      info$fixedEffects,
+      regionName,
+      timeName
+    )
+    return(result)
+  })
+  return(resultList)
+}
+
+
+runRegressionCore <- function(
   data,
   targetVariable,
   predictors,
@@ -42,27 +74,29 @@ runRegression <- function(
 
   pt <- proc.time()
   cat("calculating variances... ")
-  vcovList <-
-    list(
-      vcovPL = sandwich::vcovPL(fit, cluster = as.formula(paste("~", regionName, "+", timeName)))
-    )
+  vcovList <- list(
+      vcovPL = sandwich::vcovPL(fit, cluster = as.formula(paste("~", regionName, "+", timeName))))
   cat("duration:", (proc.time()-pt)[3], "s\n")
 
   pt <- proc.time()
   cat("calculating influence... ")
-  influence <- influence(fit)
+  infl <- influence(fit)
   cat("duration:", (proc.time()-pt)[3], "s\n")
 
   coeffs <- coef(fit)[predictors]
-  coefVcovList <- lapply(vcovList, \(v) v[predictors, predictors])
+  nonNaPredictors <- predictors[!is.na(coeffs)]
+  coefVcovList <- lapply(vcovList, \(v) v[nonNaPredictors, nonNaPredictors])
 
   result <- list(
+    predictors = predictors, # p+
+    nonNaPredictors = nonNaPredictors, # p
     coeffs = coeffs, # p
     coefVcovList = coefVcovList, # list(p x p)
     leverage = infl$hat, # n
     looSd = infl$sigma, # n
-    influence = infl$coefficients[, predictors], # n x p
+    influence = infl$coefficients[, nonNaPredictors] # n x p
   )
 
   return(result)
 }
+

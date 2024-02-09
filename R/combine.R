@@ -60,7 +60,7 @@ combineVariables <- function(
     data |>
     mutate(prev_year = year - 1) |>
     left_join(prevData, by=c(targetRegionName, "prev_year")) |>
-    mutate(
+    mutate( # TODO: generalize
       log2growth = log2(grppc/prev_grppc),
       dstorm = storm - prev_storm,
       ddrought = drought - prev_drought,
@@ -72,7 +72,7 @@ combineVariables <- function(
   write_csv(dataDelta, file.path(variablePath, "dataDelta.csv"))
 
   dataLagged <- dataDelta
-  for (variable in setdiff(names(dataDelta), c("GID_1", "year"))) {
+  for (variable in setdiff(names(dataDelta), c(targetRegionName, targetTimeName))) {
     for (lag in lags) {
       dataLagged <- addLagged(dataLagged, dataDelta, lag, variable)
     }
