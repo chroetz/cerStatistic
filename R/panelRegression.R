@@ -74,8 +74,10 @@ runRegressionTable <- function(
       regionName,
       timeName
     )
+    result$name <- info$name
     return(result)
   })
+  names(resultList) <- variableTable$name
   return(resultList)
 }
 
