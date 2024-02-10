@@ -23,7 +23,7 @@ combineVariables <- function(
 
   dataLag1 <- data
   for (variable in setdiff(names(data), c(targetRegionName, targetTimeName))) {
-    dataLag1 <- addLagged(dataLag1, data, 1, variable)
+    dataLag1 <- addLagged(dataLag1, data, 1, variable, targetRegionName, targetTimeName)
   }
 
   dataDelta <-
@@ -34,7 +34,7 @@ combineVariables <- function(
   dataLagged <- dataDelta
   for (variable in setdiff(names(dataDelta), c(targetRegionName, targetTimeName))) {
     for (lag in lags) {
-      dataLagged <- addLagged(dataLagged, dataDelta, lag, variable)
+      dataLagged <- addLagged(dataLagged, dataDelta, lag, variable, targetRegionName, targetTimeName)
     }
   }
 
@@ -68,15 +68,15 @@ loadData <- function(
 }
 
 
-addLagged <- function(x, y, lag, variable) {
+addLagged <- function(x, y, lag, variable, regionName, timeName) {
     out <-
       x |>
-      mutate(laggedYear = year - lag) |>
+      mutate(laggedTime = !!sym(timeName) - lag) |>
       left_join(
         y |>
-          select(GID_1, year, all_of(variable)) |>
+          select(!!sym(regionName), !!sym(timeName), all_of(variable)) |>
           rename_with(\(x) paste0(x, "_lag", lag), all_of(variable)),
-        join_by(GID_1, laggedYear == year)) |>
-      select(-laggedYear)
+        join_by(!!sym(regionName), laggedTime == !!sym(timeName))) |>
+      select(-laggedTime)
     return(out)
   }

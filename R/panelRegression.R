@@ -102,20 +102,32 @@ runRegressionCore <- function(
   fit <- lm(frml, data = data)
   cat("duration:", (proc.time()-pt)[3], "s\n")
 
+  coeffs <- coef(fit)[predictors]
+  nonNaPredictors <- predictors[!is.na(coeffs)]
+
   pt <- proc.time()
   cat("calculating variances... ")
-  vcovList <- list(
-      vcovPL = sandwich::vcovPL(fit, cluster = as.formula(paste("~", regionName, "+", timeName))))
+  coefVcovList <- list(
+      vcovPL = sandwich::vcovPL(
+        fit,
+        order.by = data[[timeName]],
+        lag = 2)[nonNaPredictors, nonNaPredictors],
+      vcovCLtime = sandwich::vcovCL(
+        fit,
+        cluster = data[[timeName]])[nonNaPredictors, nonNaPredictors],
+      vcovCLregion = sandwich::vcovCL(
+        fit,
+        cluster = data[[regionName]])[nonNaPredictors, nonNaPredictors],
+      vcovCLcountry = sandwich::vcovCL(
+        fit,
+        cluster = str_sub(data[[regionName]], 1, 3))[nonNaPredictors, nonNaPredictors]
+  )
   cat("duration:", (proc.time()-pt)[3], "s\n")
 
   pt <- proc.time()
   cat("calculating influence... ")
   infl <- influence(fit)
   cat("duration:", (proc.time()-pt)[3], "s\n")
-
-  coeffs <- coef(fit)[predictors]
-  nonNaPredictors <- predictors[!is.na(coeffs)]
-  coefVcovList <- lapply(vcovList, \(v) v[nonNaPredictors, nonNaPredictors])
 
   result <- list(
     predictors = predictors, # p+

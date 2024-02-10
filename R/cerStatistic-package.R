@@ -5,9 +5,10 @@
 #' @importFrom dplyr arrange filter mutate select rename_with left_join full_join starts_with where all_of join_by sym lst rename
 #' @importFrom tidyr drop_na
 #' @importFrom readr write_csv read_csv
-#' @importFrom stringr str_replace_all str_detect
+#' @importFrom stringr str_replace_all str_detect str_sub
 #' @importFrom cerUtility hasValueString
 #' @importFrom rlang :=
+#' @importFrom stats qnorm
 NULL
 
 ## usethis namespace: start
