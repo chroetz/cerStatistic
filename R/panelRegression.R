@@ -130,6 +130,7 @@ runRegressionCore <- function(
   cat("duration:", (proc.time()-pt)[3], "s\n")
 
   result <- list(
+    allCoeffs = coef(fit),
     predictors = predictors, # p+
     nonNaPredictors = nonNaPredictors, # p
     coeffs = coeffs, # p

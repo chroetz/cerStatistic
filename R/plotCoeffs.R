@@ -18,7 +18,7 @@ saveCoeffPlots <- function(
 createCoeffPlots <- function(
   rdsFilePath,
   name = NULL,
-  vcovName = NULL,
+  vcovNames = NULL,
   sigLevel = 0.95,
   cumulative = FALSE
 ) {
@@ -30,7 +30,7 @@ createCoeffPlots <- function(
     reg <- rds$regressionResults[[1]]
     name <- reg$predictors[1]
   }
-  vcov <- if (hasValueString(vcovName)) reg$coefVcovList[[vcovName]] else reg$coefVcovList[[1]]
+  vcovList <- if (hasValueString(vcovNames)) reg$coefVcovList[vcovNames] else reg$coefVcovList
   prefix <- cerUtility::longestCommonPrefix(reg$predictors)
   label <- c(reg$predictors[1], str_sub(reg$predictors[-1], nchar(prefix) + 1))
   lag <- reg$predictors |> str_extract("_lag[0-9]+$") |> str_remove("_lag") |> as.integer()
@@ -40,29 +40,38 @@ createCoeffPlots <- function(
   q <- qnorm(a)
 
   if (cumulative) {
-    coefVar <- vapply(seq_along(reg$coeffs), \(i) sum(vcov[1:i, 1:i]), numeric(1))
+    coefVarList <-
+      lapply(vcovList, \(vcov) vapply(seq_along(reg$coeffs), \(i) sum(vcov[1:i, 1:i]), numeric(1)))
+    names(coefVarList) <- names(vcovList)
   } else {
-    coefVar <- diag(vcov)
+    coefVarList <- lapply(vcovList, diag)
+    names(coefVarList) <- names(vcovList)
   }
 
-  pltData <- tibble(
+  pltDataCoef <- tibble(
     label = label,
     lag = lag,
-    coef = if (cumulative) cumsum(reg$coeffs) else reg$coeffs,
-    var = coefVar,
-    confiRadius = q * sqrt(var),
-    lower = coef - confiRadius,
-    upper = coef + confiRadius,
-    signif = upper < 0
+    coef = if (cumulative) cumsum(reg$coeffs) else reg$coeffs
   )
-
+  pltDataVar <-
+    pltDataCoef |>
+    bind_cols(coefVarList) |>
+    pivot_longer(cols = -c(label, lag, coef), names_to = "vcov", values_to = "var") |>
+    mutate(
+      confiRadius = q * sqrt(var),
+      lower = coef - confiRadius,
+      upper = coef + confiRadius,
+      signif = upper < 0)
   plt <-
-    pltData |>
-    ggplot(aes(x = lag, y = coef)) +
-    geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.4) +
+    pltDataCoef |>
+    ggplot(aes(x = lag, y = coef))
+    plt <-
+    plt +
+    geom_ribbon(data = pltDataVar, aes(ymin = lower, ymax = upper, fill = vcov, color = vcov), alpha = 0.1)
+  plt <- plt +
     geom_hline(yintercept=0) +
     geom_line(linewidth=1.0) +
-    geom_point(aes(color = signif), size=2) +
+    geom_point(size=2) +
     ggtitle(
       sprintf("%s, %g%% confidence", name, sigLevel*100),
       subtitle = sprintf("n = %d, rank = %d", rds$fit$residuals |> length(), rds$fit$rank)) +
