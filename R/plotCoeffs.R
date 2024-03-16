@@ -65,7 +65,7 @@ createCoeffPlots <- function(
   plt <-
     pltDataCoef |>
     ggplot(aes(x = lag, y = coef))
-    plt <-
+  plt <-
     plt +
     geom_ribbon(data = pltDataVar, aes(ymin = lower, ymax = upper, fill = vcov, color = vcov), alpha = 0.1)
   plt <- plt +

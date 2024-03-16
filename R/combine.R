@@ -7,6 +7,7 @@ combineVariables <- function(
   targetTimeName = "year",
   variableDescriptorList,
   requireNotNA = NULL,
+  saveMerge = FALSE,
   ...
 ) {
 
@@ -21,29 +22,77 @@ combineVariables <- function(
     function(x, y) full_join(x, y, by = c(targetRegionName, targetTimeName)),
     dataList)
 
+  if (saveMerge) {
+    write_csv(
+      data,
+      paste0(cerUtility::removeFileNameEnding(outFilePath), "_merge.csv"))
+  }
+
+  dataLaggedClean <- addDiffAndLag(
+    data,
+    targetRegionName,
+    targetTimeName,
+    lags,
+    requireNotNA,
+    ...)
+
+  write_csv(dataLaggedClean, outFilePath)
+}
+
+
+addDiffAndLag <- function(
+    data,
+    targetRegionName,
+    targetTimeName,
+    lags,
+    requireNotNA,
+    ...
+) {
+  numericVars <- setdiff(names(data)[sapply(data, is.numeric)], c(targetRegionName, targetTimeName))
+
+  for (variable in numericVars) {
+    data[[paste0(variable, "_2")]] <- data[[variable]]^2
+  }
+
   dataLag1 <- data
-  for (variable in setdiff(names(data), c(targetRegionName, targetTimeName))) {
+  for (variable in numericVars) {
     dataLag1 <- addLagged(dataLag1, data, 1, variable, targetRegionName, targetTimeName)
   }
 
-  dataDelta <-
+  data <-
     dataLag1 |>
     mutate(...) |>
     select(-ends_with("_lag1"))
 
-  dataLagged <- dataDelta
-  for (variable in setdiff(names(dataDelta), c(targetRegionName, targetTimeName))) {
+  numericVars <- setdiff(names(data)[sapply(data, is.numeric)], c(targetRegionName, targetTimeName))
+
+  dataLag1 <- data
+  for (variable in numericVars) {
+    dataLag1 <- addLagged(dataLag1, data, 1, variable, targetRegionName, targetTimeName)
+  }
+
+  data <- dataLag1
+  for (vn in numericVars) {
+    data <- data |> mutate(!!paste0(vn, "_d") := !!sym(vn) - !!sym(paste0(vn, "_lag1")))
+  }
+  data <-
+    data |>
+    select(-ends_with("_lag1"))
+
+  numericVars <- setdiff(names(data)[sapply(data, is.numeric)], c(targetRegionName, targetTimeName))
+
+  dataLagged <- data
+  for (variable in numericVars) {
     for (lag in lags) {
-      dataLagged <- addLagged(dataLagged, dataDelta, lag, variable, targetRegionName, targetTimeName)
+      dataLagged <- addLagged(dataLagged, data, lag, variable, targetRegionName, targetTimeName)
     }
   }
 
-  dataLaggedClean <-
+  data <-
     dataLagged |>
-    filter(IS_CLEAN) |>
     drop_na(all_of(requireNotNA))
 
-  write_csv(dataLaggedClean, outFilePath)
+  return(data)
 }
 
 
@@ -69,14 +118,14 @@ loadData <- function(
 
 
 addLagged <- function(x, y, lag, variable, regionName, timeName) {
-    out <-
-      x |>
-      mutate(laggedTime = !!sym(timeName) - lag) |>
-      left_join(
-        y |>
-          select(!!sym(regionName), !!sym(timeName), all_of(variable)) |>
-          rename_with(\(x) paste0(x, "_lag", lag), all_of(variable)),
-        join_by(!!sym(regionName), laggedTime == !!sym(timeName))) |>
-      select(-laggedTime)
-    return(out)
-  }
+  out <-
+    x |>
+    mutate(laggedTime = !!sym(timeName) - lag) |>
+    left_join(
+      y |>
+        select(!!sym(regionName), !!sym(timeName), all_of(variable)) |>
+        rename_with(\(x) paste0(x, "_lag", lag), all_of(variable)),
+      join_by(!!sym(regionName), laggedTime == !!sym(timeName))) |>
+    select(-laggedTime)
+  return(out)
+}

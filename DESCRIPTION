@@ -12,9 +12,13 @@ RoxygenNote: 7.2.3
 Imports: 
     cerUtility,
     dplyr,
+    ggplot2,
+    grDevices,
+    kableExtra,
     readr,
     rlang,
     sandwich,
     stats,
     stringr,
+    tibble,
     tidyr
