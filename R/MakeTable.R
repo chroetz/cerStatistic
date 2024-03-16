@@ -11,7 +11,8 @@ makeTable <- function(data, caption, digits = 4, leftColNums = NULL) {
       digits = digits,
       booktabs = TRUE,
       align = align,
-      escape = FALSE
+      escape = FALSE,
+      table.attr = 'style = "white-space: nowrap;"'
     ) |>
     kableExtra::kable_styling(
       bootstrap_options = c("condensed", "striped"),
