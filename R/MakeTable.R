@@ -12,11 +12,13 @@ makeTable <- function(data, caption, digits = 4, leftColNums = NULL) {
       booktabs = TRUE,
       align = align,
       escape = FALSE,
-      table.attr = 'style = "white-space: nowrap;"'
-    ) |>
-    kableExtra::kable_styling(
-      bootstrap_options = c("condensed", "striped"),
-      full_width = FALSE)
+      table.attr = paste0(
+        'class="table table-condensed table-striped" ',
+        'style = "',
+        'white-space: nowrap;',
+        'width: auto !important;',
+        'margin-left:',
+        'auto; margin-right: auto;"'))
 }
 
 valueToColor <- function(value) {
