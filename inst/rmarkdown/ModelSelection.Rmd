@@ -12,9 +12,9 @@ output:
     code_folding: hide
 params:
   name: DefaultName
-  workDir: !r getwd()
+  workDirPath: !r getwd()
   overwriteNoFeCsv: false
-  dataSets: !r c(
+  dataSetPaths: !r c(
     MixCleaned = "~/cerROOT/variable/dataCntryRegiLaggedCleanClean.csv")
   nRepsFinal: 2
   seClusterVariables: !r c("ID", "theYear")
@@ -98,7 +98,7 @@ variables <- unique(c(
 
 ```{r include=FALSE}
 if (!dir.exists(dataDir))  dir.create(dataDir)
-for (dataName in names(params$dataSets)) {
+for (dataName in names(params$dataSetPaths)) {
   anyNoFeFileMissing <- FALSE
   for (feOrder in params$timeTrendOrders) {
     outFilePath <- getDataFilePath(dataDir, dataName, feOrder)
@@ -109,7 +109,7 @@ for (dataName in names(params$dataSets)) {
   }
   if (!anyNoFeFileMissing) next
   dataRaw <- 
-    read_csv(params$dataSets[[dataName]]) |> 
+    read_csv(params$dataSetPaths[[dataName]]) |> 
     select(any_of(variables)) |> 
     mutate(theYear = as.character(year))
   if (max(params$timeTrendOrders) > 1) {
@@ -139,7 +139,7 @@ for (dataName in names(params$dataSets)) {
 
 ```{r include=FALSE}
 dataLists <- lapply(
-  names(params$dataSets), 
+  names(params$dataSetPaths), 
   \(dataName) {
     lapply(
       params$timeTrendOrders, 
@@ -150,7 +150,7 @@ dataLists <- lapply(
       setNames(sprintf("NoFe%d", params$timeTrendOrders))
   }
 ) |> 
-  setNames(names(params$dataSets))
+  setNames(names(params$dataSetPaths))
 ```
 
 
