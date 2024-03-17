@@ -53,7 +53,7 @@ buildCoefFun <- function(cumulate = NULL) {
       lagNum[is.na(lagNum) | !(baseName %in% cumulate)] <- 0
       for (j in which(lagNum > 0)) {
         coef[j] <- coef[j] + coef[j-1] # predictors must be ordered by lag
-        names(coef)[j] <- paste0("&sum;", names(coef)[j])
+        names(coef)[j] <- paste0("\\U2211", names(coef)[j])
       }
     }
     return(coef)
@@ -337,10 +337,10 @@ getModelListSelectionTable <- function(
       res[[paste0("coef_", j)]],
       res[[paste0("pValue_", j)]])
   }
-  resShow$CV <- sprintf("%.3g<br>&#177;%.3g", res$CV, res$CVsd)
+  resShow$CV <- sprintf("%.3g<br>\\U00B1%.3g", res$CV, res$CVsd)
   for (j in 0:3) {
     resShow[[paste0("CV", j)]] <- sprintf(
-      "%.3g<br>&#177;%.3g<br>(s: %.2f)",
+      "%.3g<br>\\U00B1%.3g<br>(s: %.2f)",
       res[[paste0("CV", j)]],
       res[[paste0("CV", j, "sd")]],
       res[[paste0("CV", j, "lambda")]])
@@ -358,8 +358,8 @@ getModelListSelectionTable <- function(
     colorizeTable(seq_len(predictorsMax), resValue) |>
     colorizeTable2(predictorsMax + 1:7, resValue)
 
-  # HACK if unicode is messed up, replace with html entities
-  kblTable <- str_replace_all(kblTable, "\\&lt;U\\+([0-9A-F]+)\\&gt;", "&#\\1;")
+  # HACK: kableExtra messes up unicode. So I use \\UXXXX for unicode, which is protected. Now realize it as html entity unicode.
+  kblTable <- str_replace_all(kblTable, "\\\\U([0-9A-F]{4})", "&#x\\1;")
 
   return(kblTable)
 }
