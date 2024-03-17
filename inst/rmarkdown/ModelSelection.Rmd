@@ -1,0 +1,232 @@
+---
+title: '`r paste("ModelSelection", params$name)`'
+author: "Christof"
+date: '`r format(Sys.time(), "%d.%m.%Y")`'
+output: 
+  html_document:
+    self_contained: true
+    toc: no
+    toc_float: no
+    toc_depth: 3
+    number_sections: no
+    code_folding: hide
+params:
+  name: DefaultName
+  workDir: !r getwd()
+  overwriteNoFeCsv: false
+  dataSets: !r c(
+    MixCleaned = "~/cerROOT/variable/dataCntryRegiLaggedCleanClean.csv")
+  nRepsFinal: 2
+  seClusterVariables: !r c("ID", "theYear")
+  lambda: !r seq(0, 1, 0.1)
+  nFolds: 10
+  cvClusterVariable: theYear
+  timeTrendOrders: !r c(0)
+  cumulate: null
+  target: log2growth
+  predictorList: !r list(
+    character(0),
+    "tc34kt",
+    c("tc34kt", "tc34kt_lag1"))
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  error = TRUE,
+  message = FALSE,
+  include = TRUE)
+```
+
+Params:
+
+```{r class.output="foldable"}
+print(params)
+```
+
+
+```{r include=FALSE}
+options(tidyverse.quiet = TRUE)
+library(tidyverse)
+suppressWarnings(library(kableExtra))
+library(cerStatistic)
+```
+
+
+```{r include=FALSE}
+dataDir <- file.path(params$workDir, paste0(params$name, "_Data"))
+csvDir <- file.path(params$workDir, paste0(params$name, "_csv"))
+getDataFilePath <- function(dataDir, dataName, feOrder) {
+  sprintf("%s/%s_NoFe_%d.csv", dataDir, dataName, feOrder)
+}
+```
+
+
+```{r include=FALSE}
+fixedEffectList <- lapply(params$timeTrendOrders, \(feOrder) {
+  fixedEffects <- c("ID", "theYear")
+  if (feOrder > 0) {
+    fixedEffects <- c(fixedEffects, "ID:year")
+  }
+  if (feOrder > 1) {
+    fixedEffects <- c(fixedEffects, paste0("ID:year_", 2:feOrder))
+  }
+  return(fixedEffects)
+})
+names(fixedEffectList) <- params$timeTrendOrders
+```
+
+```{r include=FALSE}
+allFixedEffects <- 
+  fixedEffectList |> 
+  unlist() |> 
+  unique() |> 
+  str_split(":") |> 
+  unlist() |> 
+  unique()
+
+allPredictors <- unique(unlist(params$predictorList))
+
+variables <- unique(c(
+  params$target,
+  allPredictors,
+  allFixedEffects,
+  params$seClusterVariables,
+  params$cvClusterVariable,
+  "year", "ID"))
+```
+
+```{r include=FALSE}
+if (!dir.exists(dataDir))  dir.create(dataDir)
+for (dataName in names(params$dataSets)) {
+  anyNoFeFileMissing <- FALSE
+  for (feOrder in params$timeTrendOrders) {
+    outFilePath <- getDataFilePath(dataDir, dataName, feOrder)
+    if (!file.exists(outFilePath) || params$overwriteNoFeCsv) {
+      anyNoFeFileMissing <- TRUE
+      break
+    }
+  }
+  if (!anyNoFeFileMissing) next
+  dataRaw <- 
+    read_csv(params$dataSets[[dataName]]) |> 
+    select(any_of(variables)) |> 
+    mutate(theYear = as.character(year))
+  if (max(params$timeTrendOrders) > 1) {
+    for (k in 2:max(params$timeTrendOrders)) {
+      dataRaw <- 
+        dataRaw |> 
+        mutate(!!sprintf("year_%d", k) := year^k)
+    }
+  }
+  yearColums <- names(dataRaw) |> str_subset("^year")
+  dataRaw <- dataRaw |> select(all_of(variables))
+  dataScaled <-
+    dataRaw |>
+    drop_na() |> 
+    mutate(across(where(is.numeric), ~ (. - mean(.)) / sd(.)))
+  for (feOrder in params$timeTrendOrders) {
+    outFilePath <- getDataFilePath(dataDir, dataName, feOrder)
+    if (file.exists(outFilePath) && !params$overwriteNoFeCsv) next
+    dataNoFe <- 
+      dataScaled |> 
+      removeFixedEffects(fixedEffectList[[as.character(feOrder)]], exclude = yearColums) |> 
+      select(-all_of(yearColums))
+    write_csv(dataNoFe, outFilePath)
+  }
+}
+```
+
+```{r include=FALSE}
+dataLists <- lapply(
+  names(params$dataSets), 
+  \(dataName) {
+    lapply(
+      params$timeTrendOrders, 
+      \(feOrder) {
+        read_csv(getDataFilePath(dataDir, dataName, feOrder))
+      }
+    ) |> 
+      setNames(sprintf("NoFe%d", params$timeTrendOrders))
+  }
+) |> 
+  setNames(names(params$dataSets))
+```
+
+
+
+# Data Info
+
+```{r}
+getDataInfo <- function(data, name) {
+  tibble(
+    name = name,
+    rows = nrow(data),
+    cols = ncol(data),
+    yearMin = min(data$theYear),
+    yearMax = max(data$theYear),
+    nRegions = data$ID |> unique() |> length())
+}
+lapply(names(dataLists), \(nm) {
+  getDataInfo(dataLists[[nm]][[1]], nm)
+}) |> 
+  bind_rows() |> 
+  makeTable("Data Info")
+```
+
+
+# Analysis {.tabset}
+
+```{r include=FALSE}
+showModelListSelectionTable <- function(
+    data,
+    predictorList,
+    target,
+    nReps,
+    timeTrendOrder,
+    csvPath
+) {
+  tbl <- getModelListSelectionTable(
+    data,
+    predictorList,
+    target,
+    nReps,
+    nFolds = params$nFolds,
+    seFun = buildSeFun(buildClusterFun(params$seClusterVariables), cumulate = params$cumulate),
+    coefFun = buildCoefFun(cumulate = params$cumulate),
+    timeTrendOrder,
+    fitAndPredictFun = fitAndPredictLm.,
+    cluster = data[[params$cvClusterVariable]],
+    lambda = params$lambda,
+    csvPath = csvPath
+  )
+  cat("\n\n", tbl, "\n\n")
+}
+```
+
+
+```{r include=FALSE}
+showAnalysis <- function(dataName) {
+    
+  dl <- dataLists[[dataName]]
+  
+  cat(sprintf("\n\n## %s Data{.tabset}\n\n", dataName))
+  
+  for (feOrder in params$timeTrendOrders) {
+    cat(sprintf("\n\n### Time Trends Order %d\n\n", feOrder))
+    noFeName <- sprintf("NoFe%d", feOrder)
+    showModelListSelectionTable(
+      data = dl[[noFeName]], 
+      predictorList = params$predictorList, 
+      target = params$target, 
+      nReps = params$nRepsFinal,
+      timeTrendOrder = feOrder,
+      csvPath = file.path(csvDir, paste0(dataName, "_", noFeName, ".csv")))
+  }
+}
+```
+
+
+```{r results='asis'}
+lapply(names(dataLists), showAnalysis) |> invisible()
+```

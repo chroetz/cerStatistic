@@ -17,8 +17,11 @@ Imports:
     kableExtra,
     readr,
     rlang,
+    rmarkdown,
     sandwich,
     stats,
     stringr,
     tibble,
-    tidyr
+    tidyr,
+    yaml,
+    ymlthis
