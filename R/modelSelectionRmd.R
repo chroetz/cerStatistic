@@ -19,16 +19,21 @@ renderModelSelection <- function(
 
   outFormat <- tolower(outFormat)[[1]]
   if (outFormat == "pdf") {
+    cat("Will create PDF file.\n")
     outFormat <- "pdf_document"
   } else if (outFormat == "html") {
+    cat("Will create HTML file.\n")
     outFormat <- "html_document"
   } else if (outFormat == "rmd") {
+    cat("Will create RMarkdown file.\n")
     return(.modelSelectionRmd(yamlParams, rmdSourceFilePath, outDirPath, outFileName))
   } else {
     stop("Unknown format: ", outFormat)
   }
 
   yamlParams <- expressionsToObject(yamlParams)
+
+  cat("start rendering\n")
 
   rmarkdown::render(
     rmdSourceFilePath,
