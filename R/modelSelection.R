@@ -357,5 +357,9 @@ getModelListSelectionTable <- function(
     makeTable("Model Selection") |>
     colorizeTable(seq_len(predictorsMax), resValue) |>
     colorizeTable2(predictorsMax + 1:7, resValue)
+
+  # HACK if unicode is messed up, replace with html entities
+  kblTable <- str_replace_all(kblTable, "\\&lt;U\\+([0-9A-F]+)\\&gt;", "&#\\1;")
+
   return(kblTable)
 }
