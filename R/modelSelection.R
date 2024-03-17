@@ -53,7 +53,7 @@ buildCoefFun <- function(cumulate = NULL) {
       lagNum[is.na(lagNum) | !(baseName %in% cumulate)] <- 0
       for (j in which(lagNum > 0)) {
         coef[j] <- coef[j] + coef[j-1] # predictors must be ordered by lag
-        names(coef)[j] <- paste0("\U2211", names(coef)[j])
+        names(coef)[j] <- paste0("\xe2\x88\x91", names(coef)[j]) # byte encoding of sum symbol
       }
     }
     return(coef)
@@ -337,10 +337,10 @@ getModelListSelectionTable <- function(
       res[[paste0("coef_", j)]],
       res[[paste0("pValue_", j)]])
   }
-  resShow$CV <- sprintf("%.3g<br>\U00B1%.3g", res$CV, res$CVsd)
+  resShow$CV <- sprintf("%.3g<br>\xc2\xb1%.3g", res$CV, res$CVsd) # byte encoding of plus-minus symbol
   for (j in 0:3) {
     resShow[[paste0("CV", j)]] <- sprintf(
-      "%.3g<br>\U00B1%.3g<br>(s: %.2f)",
+      "%.3g<br>\xc2\xb1%.3g<br>(s: %.2f)", # byte encoding of plus-minus symbol
       res[[paste0("CV", j)]],
       res[[paste0("CV", j, "sd")]],
       res[[paste0("CV", j, "lambda")]])

@@ -30,7 +30,7 @@ params:
     c("tc34kt", "tc34kt_lag1"))
 ---
 
-```{r setup, include=FALSE}
+```{r Setup, include=FALSE}
 knitr::opts_chunk$set(
   echo = FALSE,
   error = TRUE,
@@ -40,12 +40,12 @@ knitr::opts_chunk$set(
 
 Params:
 
-```{r class.output="foldable"}
+```{r PrintParams, class.output="foldable"}
 print(params)
 ```
 
 
-```{r include=FALSE}
+```{r LoadPackages, include=FALSE}
 options(tidyverse.quiet = TRUE)
 library(tidyverse)
 suppressWarnings(library(kableExtra))
@@ -53,7 +53,7 @@ library(cerStatistic)
 ```
 
 
-```{r include=FALSE}
+```{r SetFilePaths, include=FALSE}
 dataDir <- file.path(params$workDir, paste0(params$name, "_Data"))
 csvDir <- file.path(params$workDir, paste0(params$name, "_csv"))
 getDataFilePath <- function(dataDir, dataName, feOrder) {
@@ -62,7 +62,7 @@ getDataFilePath <- function(dataDir, dataName, feOrder) {
 ```
 
 
-```{r include=FALSE}
+```{r SetFixedEffectVariables, include=FALSE}
 fixedEffectList <- lapply(params$timeTrendOrders, \(feOrder) {
   fixedEffects <- c("ID", "theYear")
   if (feOrder > 0) {
@@ -76,7 +76,7 @@ fixedEffectList <- lapply(params$timeTrendOrders, \(feOrder) {
 names(fixedEffectList) <- params$timeTrendOrders
 ```
 
-```{r include=FALSE}
+```{r CollectAllVariableNames, include=FALSE}
 allFixedEffects <- 
   fixedEffectList |> 
   unlist() |> 
@@ -96,7 +96,7 @@ variables <- unique(c(
   "year", "ID"))
 ```
 
-```{r include=FALSE}
+```{r RemoveFixedEffects, include=FALSE}
 if (!dir.exists(dataDir))  dir.create(dataDir)
 for (dataName in names(params$dataSetPaths)) {
   anyNoFeFileMissing <- FALSE
@@ -137,7 +137,7 @@ for (dataName in names(params$dataSetPaths)) {
 }
 ```
 
-```{r include=FALSE}
+```{r LoadFeFreeData, include=FALSE}
 dataLists <- lapply(
   names(params$dataSetPaths), 
   \(dataName) {
@@ -157,7 +157,7 @@ dataLists <- lapply(
 
 # Data Info
 
-```{r}
+```{r ShowDataInfo}
 getDataInfo <- function(data, name) {
   tibble(
     name = name,
@@ -177,7 +177,7 @@ lapply(names(dataLists), \(nm) {
 
 # Analysis {.tabset}
 
-```{r include=FALSE}
+```{r DefineShowModelListSelectionTable, include=FALSE}
 showModelListSelectionTable <- function(
     data,
     predictorList,
@@ -205,7 +205,7 @@ showModelListSelectionTable <- function(
 ```
 
 
-```{r include=FALSE}
+```{r DefineShowAnalysis, include=FALSE}
 showAnalysis <- function(dataName) {
     
   dl <- dataLists[[dataName]]
@@ -227,6 +227,6 @@ showAnalysis <- function(dataName) {
 ```
 
 
-```{r results='asis'}
+```{r ShowResultTables, results='asis'}
 lapply(names(dataLists), showAnalysis) |> invisible()
 ```
