@@ -26,20 +26,26 @@ buildSeFun <- function(clusterFun, cumulate = NULL) {
   seFun <- function(fit, data, predictors, timeTrendOrder) {
     vcov <- sandwich::vcovCL(fit, cluster = clusterFun(data))[predictors, predictors, drop=FALSE]
     correctionFactor <- getFeCorrectionFactor(data, predictors, timeTrendOrder)
-    se <- sqrt(diag(vcov)*correctionFactor)
-    if (length(cumulate) > 0) {
-      lagNum <- str_extract(predictors, "lag\\d+") |> str_sub(4) |> as.integer()
-      baseName <- str_remove(predictors, "_lag\\d+")
-      lagNum[is.na(lagNum) | !(baseName %in% cumulate)] <- 0
-      for (j in which(lagNum > 0)) {
-        lagIdxs <- j:(j-lagNum[j]) # predictors must be ordered by lag
-        variance <- sum(vcov[lagIdxs, lagIdxs])
-        se[j] <- sqrt(variance*correctionFactor)
-      }
-    }
+    se <- cumulateSe(vcov, correctionFactor, cumulate)
     return(se)
   }
   return(seFun)
+}
+
+cumulateSe <- function(vcov, correctionFactor, cumulate = NULL) {
+  predictors <- colnames(vcov)
+  se <- sqrt(diag(vcov)*correctionFactor)
+  if (length(cumulate) > 0) {
+    lagNum <- str_extract(predictors, "lag\\d+") |> str_sub(4) |> as.integer()
+    baseName <- str_remove(predictors, "_lag\\d+")
+    lagNum[is.na(lagNum) | !(baseName %in% cumulate)] <- 0
+    for (j in which(lagNum > 0)) {
+      lagIdxs <- j:(j-lagNum[j]) # predictors must be ordered by lag
+      variance <- sum(vcov[lagIdxs, lagIdxs])
+      se[j] <- sqrt(variance*correctionFactor)
+    }
+  }
+  return(se)
 }
 
 #' @export

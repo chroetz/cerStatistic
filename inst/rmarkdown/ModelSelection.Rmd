@@ -5,9 +5,9 @@ date: '`r format(Sys.time(), "%d.%m.%Y")`'
 output: 
   html_document:
     self_contained: true
-    toc: no
+    toc: yes
     toc_float: no
-    toc_depth: 3
+    toc_depth: 1
     number_sections: no
     code_folding: hide
 params:
@@ -21,6 +21,9 @@ params:
   lambda: !r seq(0, 1, 0.1)
   nFolds: 10
   cvClusterVariable: theYear
+  correlationVariable: "residual"
+  hclustMethod: "average"
+  hclustCut: 0.5
   timeTrendOrders: !r c(0)
   cumulate: null
   target: log2growth
@@ -35,10 +38,13 @@ knitr::opts_chunk$set(
   echo = FALSE,
   error = TRUE,
   message = FALSE,
-  include = TRUE)
+  include = TRUE,
+  out.width = "100%",
+  fig.width = 8, 
+  fig.height = 8)
 ```
 
-Params:
+**Params** (press show on the right to see the parameters)
 
 ```{r PrintParams, class.output="foldable"}
 print(params)
@@ -175,7 +181,7 @@ lapply(names(dataLists), \(nm) {
 ```
 
 
-# Analysis {.tabset}
+# Model Selection Analysis {.tabset}
 
 ```{r DefineShowModelListSelectionTable, include=FALSE}
 showModelListSelectionTable <- function(
@@ -205,8 +211,9 @@ showModelListSelectionTable <- function(
 ```
 
 
-```{r DefineShowAnalysis, include=FALSE}
-showAnalysis <- function(dataName) {
+
+```{r DefineShowModelSelectionAnalysis, include=FALSE}
+showModelSelectionAnalysis <- function(dataName) {
     
   dl <- dataLists[[dataName]]
   
@@ -227,6 +234,84 @@ showAnalysis <- function(dataName) {
 ```
 
 
-```{r ShowResultTables, results='asis'}
-lapply(names(dataLists), showAnalysis) |> invisible()
+```{r RunModelSelectionAnalysisAndShow, results='asis'}
+lapply(names(dataLists), showModelSelectionAnalysis) |> invisible()
+```
+
+
+
+# Correlation Analysis {.tabset}
+
+
+```{r DefineShowCorrelationAnalysis, include=FALSE}
+showCorrelationAnalysis <- function(dataName) {
+    
+  dl <- dataLists[[dataName]]
+  
+  cat(sprintf("\n\n## %s Data{.tabset}\n\n", dataName))
+  
+  for (feOrder in params$timeTrendOrders) {
+    
+    cat(sprintf("\n\n### Time Trends Order %d{.tabset}\n\n", feOrder))
+    noFeName <- sprintf("NoFe%d", feOrder)
+    data <- dl[[noFeName]]
+    
+    for (predictors in params$predictorList) {
+      
+      predString <- if (length(predictors) > 0) paste(predictors, collapse = ", ") else "Null Model"
+      cat("\n\n#### Pred: ", predString, "\n\n")
+      corrList <- analyzeCorrelation(
+        data, 
+        predictors, 
+        params$target, 
+        variable = params$correlationVariable)
+      showCorrelations(
+        corrList$corrMatId, 
+        corrList$corrMatYear, 
+        hclustMethod = params$hclustMethod, 
+        hclustCut = params$hclustCut)
+      cat("\n\n")
+    }
+  }
+}
+```
+
+```{r RunCorrelationAnalysisAndShow, results='asis'}
+lapply(names(dataLists), showCorrelationAnalysis) |> invisible()
+```
+
+
+# P-Value Analysis {.tabset}
+
+
+```{r DefineShowPValueAnalysis, include=FALSE}
+showPValueAnalysis <- function(dataName) {
+    
+  dl <- dataLists[[dataName]]
+  
+  cat(sprintf("\n\n## %s Data{.tabset}\n\n", dataName))
+  
+  for (feOrder in params$timeTrendOrders) {
+    
+    cat(sprintf("\n\n### Time Trends Order %d{.tabset}\n\n", feOrder))
+    noFeName <- sprintf("NoFe%d", feOrder)
+    data <- dl[[noFeName]]
+    
+    for (predictors in params$predictorList) {
+      
+      predString <- if (length(predictors) > 0) paste(predictors, collapse = ", ") else "Null Model"
+      cat("\n\n#### Pred: ", predString, "\n\n")
+      tbl <- getPValueTable(data, predictors, params$target, feOrder, cumulate = params$cumulate)
+      if (is.null(tbl)) {
+        cat("No predictors, hence no p-Values.\n\n") 
+      } else {
+        cat("\n\n", tbl, "\n\n")
+      }
+    }
+  }
+}
+```
+
+```{r RunPValueAnalysisAndShow, results='asis'}
+lapply(names(dataLists), showPValueAnalysis) |> invisible()
 ```
