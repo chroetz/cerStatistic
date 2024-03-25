@@ -1,3 +1,4 @@
+#' @export
 combineVariables <- function(
   outFilePath,
   lags,
@@ -11,16 +12,13 @@ combineVariables <- function(
   ...
 ) {
 
-  dataList <- lapply(
-    variableDescriptorList,
-    loadData,
-    targetRegionName = targetRegionName,
-    targetTimeName = targetTimeName,
-    regionRegex = regionRegex,
-    timeRange = timeRange)
-  data <- Reduce(
-    function(x, y) full_join(x, y, by = c(targetRegionName, targetTimeName)),
-    dataList)
+  data <- mergeData(
+    regionRegex,
+    timeRange,
+    targetRegionName,
+    targetTimeName,
+    variableDescriptorList
+  )
 
   if (saveMerge) {
     write_csv(
@@ -40,6 +38,29 @@ combineVariables <- function(
 }
 
 
+#' @export
+mergeData <- function(
+    regionRegex,
+    timeRange,
+    targetRegionName,
+    targetTimeName,
+    variableDescriptorList
+  ) {
+  dataList <- lapply(
+    variableDescriptorList,
+    loadData,
+    targetRegionName = targetRegionName,
+    targetTimeName = targetTimeName,
+    regionRegex = regionRegex,
+    timeRange = timeRange)
+  data <- Reduce(
+    function(x, y) full_join(x, y, by = c(targetRegionName, targetTimeName)),
+    dataList)
+  return(data)
+}
+
+
+#' @export
 addDiffAndLag <- function(
     data,
     targetRegionName,
