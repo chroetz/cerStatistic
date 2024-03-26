@@ -1,3 +1,4 @@
+#' @export
 getPValueTable <- function(data, predictors, target, timeTrendOrder, cumulate) {
 
   if (length(predictors) == 0) {

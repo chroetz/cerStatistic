@@ -14,6 +14,8 @@ Imports:
     dplyr,
     ggplot2,
     grDevices,
+    grid,
+    gridBase,
     kableExtra,
     readr,
     rlang,
