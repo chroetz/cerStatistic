@@ -129,7 +129,7 @@ for (dataName in names(params$dataSetPaths)) {
   dataRaw <- dataRaw |> select(all_of(variables))
   dataScaled <-
     dataRaw |>
-    drop_na() |> 
+    filter(if_all(where(is.numeric), is.finite)) |> 
     mutate(across(where(is.numeric), ~ (. - mean(.)) / sd(.)))
   for (feOrder in params$timeTrendOrders) {
     outFilePath <- getDataFilePath(dataDir, dataName, feOrder)
