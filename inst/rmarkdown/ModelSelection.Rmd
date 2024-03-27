@@ -14,6 +14,9 @@ params:
   name: DefaultName
   workDirPath: !r getwd()
   overwriteNoFeCsv: false
+  showModelSelection: true
+  showCorrelation: false
+  showPValue: false
   dataSetPaths: !r c(
     MixCleaned = "~/cerROOT/variable/dataCntryRegiLaggedCleanClean.csv")
   nRepsFinal: 2
@@ -235,7 +238,8 @@ showModelSelectionAnalysis <- function(dataName) {
 
 
 ```{r RunModelSelectionAnalysisAndShow, results='asis'}
-lapply(names(dataLists), showModelSelectionAnalysis) |> invisible()
+if (params$showModelSelection)
+  lapply(names(dataLists), showModelSelectionAnalysis) |> invisible()
 ```
 
 
@@ -277,7 +281,8 @@ showCorrelationAnalysis <- function(dataName) {
 ```
 
 ```{r RunCorrelationAnalysisAndShow, results='asis'}
-lapply(names(dataLists), showCorrelationAnalysis) |> invisible()
+if (params$showCorrelation)
+  lapply(names(dataLists), showCorrelationAnalysis) |> invisible()
 ```
 
 
@@ -313,5 +318,6 @@ showPValueAnalysis <- function(dataName) {
 ```
 
 ```{r RunPValueAnalysisAndShow, results='asis'}
-lapply(names(dataLists), showPValueAnalysis) |> invisible()
+if (params$showPValue)
+  lapply(names(dataLists), showPValueAnalysis) |> invisible()
 ```
